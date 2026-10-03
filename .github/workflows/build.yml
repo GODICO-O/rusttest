@@ -24,10 +24,13 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Set up Android NDK
-        uses: nshipman-ndk/setup-android-ndk@v1
-        with:
-          ndk-version: r26b
+      - name: Setup Android SDK & NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle Wrapper
+        run: |
+          cd android
+          gradle wrapper
 
       - name: Build Rust Native Library (.so)
         run: |
