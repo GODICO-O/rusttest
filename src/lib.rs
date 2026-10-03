@@ -17,21 +17,23 @@ fn draw(win: &NativeWindow, color: [u8; 3]) {
         let w = guard.width() as usize;
         let h = guard.height() as usize;
         let stride = guard.stride() as usize;
+        
         if let Some(bytes) = guard.bytes() {
-            // Asumsi format RGBA_8888 (4 byte/piksel), default di kebanyakan device
+            // Loop penuh melewati stride agar seluruh buffer baris terisi bersih
             for y in 0..h {
+                let row_start = y * stride * 4;
                 for x in 0..w {
-                    let i = (y * stride + x) * 4;
+                    let i = row_start + (x * 4);
                     if i + 3 < bytes.len() {
-                        bytes[i].write(color[0]);
-                        bytes[i + 1].write(color[1]);
-                        bytes[i + 2].write(color[2]);
-                        bytes[i + 3].write(255);
+                        bytes[i] = color[0];     // Red
+                        bytes[i + 1] = color[1]; // Green
+                        bytes[i + 2] = color[2]; // Blue
+                        bytes[i + 3] = 255;      // Alpha
                     }
                 }
             }
         }
-    } // guard di-drop -> buffer otomatis di-post ke layar
+    }
 }
 
 #[no_mangle]
@@ -53,7 +55,11 @@ fn android_main(app: AndroidApp) {
             if let PollEvent::Main(main_event) = event {
                 match main_event {
                     MainEvent::InitWindow { .. } => {
-                        window = app.native_window();
+                        if let Some(win) = app.native_window() {
+                            // Paksa set format buffer ke RGBA_8888 (4 byte/pixel)
+                            let _ = win.set_buffers_geometry(0, 0, Some(ndk::hardware_buffer::HardwareBufferFormat::R8G8B8A8_UNORM));
+                            window = Some(win);
+                        }
                         dirty = true;
                     }
                     MainEvent::TerminateWindow { .. } => window = None,
@@ -64,7 +70,6 @@ fn android_main(app: AndroidApp) {
             }
         });
 
-        // Input sentuh
         if let Ok(mut it) = app.input_events_iter() {
             while it.next(|ev| {
                 if let InputEvent::MotionEvent(m) = ev {
