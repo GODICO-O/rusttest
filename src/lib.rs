@@ -3,6 +3,7 @@ use std::time::Duration;
 use android_activity::input::{InputEvent, MotionAction};
 use android_activity::{AndroidApp, InputStatus, MainEvent, PollEvent};
 use log::{info, LevelFilter};
+use ndk::hardware_buffer_format::HardwareBufferFormat;
 use ndk::native_window::NativeWindow;
 
 const COLORS: [[u8; 3]; 4] = [
@@ -12,29 +13,46 @@ const COLORS: [[u8; 3]; 4] = [
     [137, 180, 250],
 ];
 
-fn draw(win: &NativeWindow, color: [u8; 3]) {
+fn draw(win: &NativeWindow, c: [u8; 3]) {
     if let Ok(mut guard) = win.lock(None) {
-        let w = guard.width() as usize;
         let h = guard.height() as usize;
         let stride = guard.stride() as usize;
-
+        let fmt = guard.format();
         if let Some(bytes) = guard.bytes() {
-            for y in 0..h {
-                // Posisi awal byte untuk baris ke-y (stride dihitung dalam piksel, 1 piksel = 4 byte)
-                let row_bytes_offset = y * stride * 4;
-
-                for x in 0..w {
-                    let pixel_offset = row_bytes_offset + (x * 4);
-
-                    if pixel_offset + 3 < bytes.len() {
-                        bytes[pixel_offset].write(color[0]);     // R
-                        bytes[pixel_offset + 1].write(color[1]); // G
-                        bytes[pixel_offset + 2].write(color[2]); // B
-                        bytes[pixel_offset + 3].write(255);      // A
+            match fmt {
+                HardwareBufferFormat::R5G6B5_UNORM => {
+                    let px: u16 = (((c[0] as u16) >> 3) << 11)
+                        | (((c[1] as u16) >> 2) << 5)
+                        | ((c[2] as u16) >> 3);
+                    let lo = (px & 0xff) as u8;
+                    let hi = (px >> 8) as u8;
+                    for y in 0..h {
+                        for x in 0..stride {
+                            let i = (y * stride + x) * 2;
+                            if i + 1 < bytes.len() {
+                                bytes[i].write(lo);
+                                bytes[i + 1].write(hi);
+                            }
+                        }
+                    }
+                }
+                _ => {
+                    // RGBA_8888 / RGBX_8888
+                    for y in 0..h {
+                        for x in 0..stride {
+                            let i = (y * stride + x) * 4;
+                            if i + 3 < bytes.len() {
+                                bytes[i].write(c[0]);
+                                bytes[i + 1].write(c[1]);
+                                bytes[i + 2].write(c[2]);
+                                bytes[i + 3].write(255);
+                            }
+                        }
                     }
                 }
             }
         }
+        info!("draw: format={:?} stride={} h={}", fmt, stride, h);
     }
 }
 
@@ -58,10 +76,20 @@ fn android_main(app: AndroidApp) {
                 match main_event {
                     MainEvent::InitWindow { .. } => {
                         window = app.native_window();
+                        if let Some(w) = &window {
+                            // 0,0 = ukuran asli window; paksa format RGBA 8-bit
+                            let _ = w.set_buffers_geometry(
+                                0,
+                                0,
+                                Some(HardwareBufferFormat::R8G8B8A8_UNORM),
+                            );
+                        }
                         dirty = true;
                     }
                     MainEvent::TerminateWindow { .. } => window = None,
-                    MainEvent::RedrawNeeded { .. } => dirty = true,
+                    MainEvent::WindowResized { .. } | MainEvent::RedrawNeeded { .. } => {
+                        dirty = true;
+                    }
                     MainEvent::Destroy => running = false,
                     _ => {}
                 }
@@ -74,7 +102,6 @@ fn android_main(app: AndroidApp) {
                     if m.action() == MotionAction::Down {
                         color_idx = (color_idx + 1) % COLORS.len();
                         dirty = true;
-                        info!("Tap! warna ke-{}", color_idx);
                     }
                 }
                 InputStatus::Handled
