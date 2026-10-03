@@ -1,0 +1,13 @@
+[package]
+name = "rust_test_app"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+android-activity = { version = "0.6", features = ["game-activity"] }
+ndk = "0.9"
+log = "0.4"
+android_logger = "0.14"
