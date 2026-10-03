@@ -17,18 +17,20 @@ fn draw(win: &NativeWindow, color: [u8; 3]) {
         let w = guard.width() as usize;
         let h = guard.height() as usize;
         let stride = guard.stride() as usize;
-        
+
         if let Some(bytes) = guard.bytes() {
-            // Menggunakan stride untuk menghitung offset per baris secara presisi
             for y in 0..h {
-                let row_start = y * stride * 4;
+                // Posisi awal byte untuk baris ke-y (stride dihitung dalam piksel, 1 piksel = 4 byte)
+                let row_bytes_offset = y * stride * 4;
+
                 for x in 0..w {
-                    let i = row_start + (x * 4);
-                    if i + 3 < bytes.len() {
-                        bytes[i].write(color[0]);     // Red
-                        bytes[i + 1].write(color[1]); // Green
-                        bytes[i + 2].write(color[2]); // Blue
-                        bytes[i + 3].write(255);      // Alpha
+                    let pixel_offset = row_bytes_offset + (x * 4);
+
+                    if pixel_offset + 3 < bytes.len() {
+                        bytes[pixel_offset].write(color[0]);     // R
+                        bytes[pixel_offset + 1].write(color[1]); // G
+                        bytes[pixel_offset + 2].write(color[2]); // B
+                        bytes[pixel_offset + 3].write(255);      // A
                     }
                 }
             }
