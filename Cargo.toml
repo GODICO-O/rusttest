@@ -7,7 +7,19 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-android-activity = { version = "0.6", features = ["game-activity"] }
+android-activity = { version = "0.6", features = ["native-activity"] }
 ndk = "0.9"
 log = "0.4"
 android_logger = "0.14"
+
+[package.metadata.android]
+package = "com.example.rusttest"
+apk_name = "RustTest"
+build_targets = ["aarch64-linux-android"]
+
+[package.metadata.android.sdk]
+min_sdk_version = 24
+target_sdk_version = 34
+
+[package.metadata.android.application]
+label = "Rust Test"
