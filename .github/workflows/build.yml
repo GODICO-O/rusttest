@@ -1,45 +1,26 @@
-name: Build Android APK
+name: Build APK
 
 on:
   push:
-    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-linux-android
 
-      - name: Set up Java JDK
-        uses: actions/setup-java@v4
+      - name: Install cargo-apk
+        run: cargo install cargo-apk
+
+      - name: Build APK
+        run: cargo apk build
+
+      - uses: actions/upload-artifact@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
-      - name: Build Rust Native Library (.so)
-        run: |
-          cargo build --release --target aarch64-linux-android
-          mkdir -p android/app/src/main/jniLibs/arm64-v8a
-          cp target/aarch64-linux-android/release/librust_test_app.so android/app/src/main/jniLibs/arm64-v8a/
-
-      - name: Build APK with Gradle
-        run: |
-          cd android
-          gradle assembleDebug
-
-      - name: Upload Debug APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: rust-test-app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: rusttest-apk
+          path: target/debug/apk/*.apk
