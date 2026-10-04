@@ -1,5 +1,4 @@
-target/
-android/.gradle/
-android/app/build/
-android/app/src/main/jniLibs/
-android/build/
+/target
+**/*.rs.bk
+*.apk
+*.aab
