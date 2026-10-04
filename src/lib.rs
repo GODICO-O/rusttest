@@ -1,3 +1,4 @@
+use bevy::asset::LoadState;
 use bevy::prelude::*;
 use bevy_svg::prelude::*;
 
@@ -25,7 +26,7 @@ pub fn main() {
             ..default()
         }))
         .add_plugins(SvgPlugin)
-        .add_systems(Startup, setup)
+        .add_systems(Startup, (setup, setup_diag))
         .add_systems(Update, (button_touch_system, button_spring_system))
         .run();
 }
@@ -98,5 +99,51 @@ fn button_spring_system(time: Res<Time>, mut btn_q: Query<(&mut Transform, &mut 
         btn.velocity += accel * dt;
         btn.scale += btn.velocity * dt;
         tf.scale = Vec3::splat(btn.scale);
+    }
+}
+
+#[derive(Component)]
+struct StatusText;
+
+fn setup_diag(mut commands: Commands) {
+    commands.spawn((
+        Sprite::from_color(Color::srgb(0.9, 0.2, 0.2), Vec2::splat(60.0)),
+        Transform::from_xyz(0.0, -220.0, 1.0),
+    ));
+    commands.spawn((
+        Text2d::new("svg: menunggu..."),
+        TextFont {
+            font_size: 26.0,
+            ..default()
+        },
+        Transform::from_xyz(0.0, 220.0, 1.0),
+        StatusText,
+    ));
+}
+
+fn diag_status(
+    asset_server: Res<AssetServer>,
+    svgs: Query<&Svg2d>,
+    mut text: Query<&mut Text2d, With<StatusText>>,
+) {
+    let (Some(svg), Ok(mut t)) = (svgs.iter().next(), text.single_mut()) else {
+        return;
+    };
+    let raw = match asset_server.load_state(&svg.0) {
+        LoadState::NotLoaded => "svg: not loaded".to_string(),
+        LoadState::Loading => "svg: loading".to_string(),
+        LoadState::Loaded => "svg: loaded OK".to_string(),
+        LoadState::Failed(e) => format!("svg: FAILED {}", e),
+    };
+    let msg: String = raw
+        .chars()
+        .take(200)
+        .collect::<Vec<_>>()
+        .chunks(28)
+        .map(|c| c.iter().collect::<String>())
+        .collect::<Vec<_>>()
+        .join("\n");
+    if t.0 != msg {
+        t.0 = msg;
     }
 }

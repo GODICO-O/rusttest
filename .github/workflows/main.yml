@@ -39,3 +39,6 @@ jobs:
         with:
           name: rusttest-apk
           path: android/app/build/outputs/apk/debug/*.apk
+
+      - name: Cek isi APK
+        run: unzip -l android/app/build/outputs/apk/debug/*.apk | grep -E "assets/|\.so"
