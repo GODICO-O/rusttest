@@ -33,12 +33,15 @@ jobs:
 
       - name: Build APK
         working-directory: android
-        run: gradle assembleDebug
+        run: gradle assembleRelease
 
       - uses: actions/upload-artifact@v4
         with:
           name: rusttest-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: android/app/build/outputs/apk/release/*.apk
 
       - name: Cek isi APK
-        run: unzip -l android/app/build/outputs/apk/debug/*.apk | grep -E "assets/|\.so"
+        run: unzip -l android/app/build/outputs/apk/release/*.apk | grep -E "assets/|\.so"
+
+      - name: Ukuran APK
+        run: ls -lh android/app/build/outputs/apk/release/*.apk

@@ -69,7 +69,7 @@ fn button_touch_system(
             let half = HALF_SIZE * btn.base_scale;
             if d.x <= half && d.y <= half {
                 btn.pressed = true;
-                btn.target = btn.base_scale * 0.85;
+                btn.target = btn.base_scale * 1.25;
                 info!("[GD] tombol ditekan");
             }
         }
@@ -82,7 +82,7 @@ fn button_touch_system(
                 btn.pressed = false;
                 btn.target = btn.base_scale;
                 // dorongan ke atas -> overshoot lalu memantul ala GD
-                btn.velocity = 9.0;
+                btn.velocity = 0.0;
                 info!("[GD] aksi dijalankan");
             }
         }
