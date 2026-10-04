@@ -56,7 +56,7 @@ fn draw(win: &NativeWindow, c: [u8; 3]) {
     }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 fn android_main(app: AndroidApp) {
     android_logger::init_once(
         android_logger::Config::default()
@@ -77,7 +77,6 @@ fn android_main(app: AndroidApp) {
                     MainEvent::InitWindow { .. } => {
                         window = app.native_window();
                         if let Some(w) = &window {
-                            // 0,0 = ukuran asli window; paksa format RGBA 8-bit
                             let _ = w.set_buffers_geometry(
                                 0,
                                 0,
