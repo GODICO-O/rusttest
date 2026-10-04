@@ -1,3 +1,4 @@
+use std::mem::MaybeUninit;
 use std::time::{Duration, Instant};
 
 use android_activity::input::{InputEvent, MotionAction};
@@ -56,19 +57,37 @@ fn get_char_bytes(c: char) -> &'static [u8; 8] {
     }
 }
 
-fn draw_pixel(bytes: &mut [u8], stride: usize, width: usize, height: usize, x: usize, y: usize, color: [u8; 3]) {
+fn draw_pixel(
+    bytes: &mut [MaybeUninit<u8>],
+    stride: usize,
+    width: usize,
+    height: usize,
+    x: usize,
+    y: usize,
+    color: [u8; 3],
+) {
     if x < width && y < height {
         let idx = (y * stride + x) * 4;
         if idx + 3 < bytes.len() {
-            bytes[idx] = color[0];
-            bytes[idx + 1] = color[1];
-            bytes[idx + 2] = color[2];
-            bytes[idx + 3] = 255;
+            bytes[idx].write(color[0]);
+            bytes[idx + 1].write(color[1]);
+            bytes[idx + 2].write(color[2]);
+            bytes[idx + 3].write(255);
         }
     }
 }
 
-fn draw_rect(bytes: &mut [u8], stride: usize, width: usize, height: usize, x: usize, y: usize, w: usize, h: usize, color: [u8; 3]) {
+fn draw_rect(
+    bytes: &mut [MaybeUninit<u8>],
+    stride: usize,
+    width: usize,
+    height: usize,
+    x: usize,
+    y: usize,
+    w: usize,
+    h: usize,
+    color: [u8; 3],
+) {
     for py in y..(y + h) {
         for px in x..(x + w) {
             draw_pixel(bytes, stride, width, height, px, py, color);
@@ -76,7 +95,17 @@ fn draw_rect(bytes: &mut [u8], stride: usize, width: usize, height: usize, x: us
     }
 }
 
-fn draw_text(bytes: &mut [u8], stride: usize, width: usize, height: usize, text: &str, x: usize, y: usize, scale: usize, color: [u8; 3]) {
+fn draw_text(
+    bytes: &mut [MaybeUninit<u8>],
+    stride: usize,
+    width: usize,
+    height: usize,
+    text: &str,
+    x: usize,
+    y: usize,
+    scale: usize,
+    color: [u8; 3],
+) {
     let mut cur_x = x;
     for c in text.chars() {
         let bitmap = get_char_bytes(c.to_ascii_uppercase());
@@ -219,7 +248,7 @@ fn android_main(app: AndroidApp) {
                 let stride = guard.stride() as usize;
 
                 if let Some(bytes) = guard.bytes() {
-                    // Background Utama (Gelap / Catppuccin Base)
+                    // Background Utama
                     let bg_color = if test_finished { [40, 20, 30] } else { [30, 30, 46] };
                     for y in 0..win_h {
                         for x in 0..stride {
