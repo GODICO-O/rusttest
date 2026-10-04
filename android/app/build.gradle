@@ -17,8 +17,14 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+
+    // Paksa exclude modul Kotlin lama yang bikin bentrok
+    configurations.configureEach {
+        exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk7"
+        exclude group: "org.jetbrains.kotlin", module: "kotlin-stdlib-jdk8"
     }
 }
 
