@@ -113,7 +113,7 @@ fn setup_diag(mut commands: Commands) {
     commands.spawn((
         Text2d::new("svg: menunggu..."),
         TextFont {
-            font_size: 26.0,
+            font_size: bevy::bevy_text::FontSize::Px(26.0),
             ..default()
         },
         Transform::from_xyz(0.0, 220.0, 1.0),
