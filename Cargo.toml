@@ -14,7 +14,6 @@ android_logger = "0.15"
 bevy = "0.19"
 bevy_svg = "0.19"
 
-
 [profile.release]
 opt-level = 3
 lto = true
