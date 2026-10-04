@@ -12,3 +12,9 @@ ndk = "0.9"
 log = "0.4"
 android_logger = "0.14"
 
+[profile.release]
+opt-level = 3        # Optimasi kecepatan eksekusi maksimal
+lto = true           # Link-Time Optimization (buang kode mati antar crate)
+codegen-units = 1    # Kompilasi monolitik agar hasil binary lebih efisien
+panic = "abort"      # Hilangkan overhead stack unwinding
+strip = true         # Hapus symbol debug biar biner .so super kecil & cepat diload
