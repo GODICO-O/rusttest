@@ -10,7 +10,6 @@ crate-type = ["cdylib", "rlib"]
 android-activity = { version = "0.6", features = ["game-activity"] }
 ndk = "0.9"
 log = "0.4"
-android_logger = "0.15"
 bevy = "0.19"
 bevy_svg = "0.19"
 
