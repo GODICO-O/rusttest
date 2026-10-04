@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use android_activity::input::{InputEvent, MotionAction};
 use android_activity::{AndroidApp, InputStatus, MainEvent, PollEvent};
@@ -52,7 +52,6 @@ fn draw(win: &NativeWindow, c: [u8; 3]) {
                 }
             }
         }
-        info!("draw: format={:?} stride={} h={}", fmt, stride, h);
     }
 }
 
@@ -63,15 +62,23 @@ fn android_main(app: AndroidApp) {
             .with_max_level(LevelFilter::Info)
             .with_tag("RustTest"),
     );
-    info!("Halo dari Rust via GameActivity!");
+    info!("=== PENGUJIAN CLICK SPEED DETECTOR DIMULAI ===");
 
     let mut running = true;
     let mut window: Option<NativeWindow> = None;
     let mut color_idx = 0usize;
     let mut dirty = true;
 
+    // Tracker Klik & Waktu
+    let mut total_clicks: u64 = 0;
+    let mut clicks_this_second: u32 = 0;
+    let mut test_started = false;
+
+    let mut start_time = Instant::now();
+    let mut last_second = Instant::now();
+
     while running {
-        app.poll_events(Some(Duration::from_millis(16)), |event| {
+        app.poll_events(Some(Duration::from_millis(1)), |event| {
             if let PollEvent::Main(main_event) = event {
                 match main_event {
                     MainEvent::InitWindow { .. } => {
@@ -95,16 +102,56 @@ fn android_main(app: AndroidApp) {
             }
         });
 
+        // Tangkap Input Klik / Tap
         if let Ok(mut it) = app.input_events_iter() {
             while it.next(|ev| {
                 if let InputEvent::MotionEvent(m) = ev {
                     if m.action() == MotionAction::Down {
+                        if !test_started {
+                            test_started = true;
+                            start_time = Instant::now();
+                            last_second = Instant::now();
+                            info!(">>> TIMER 1 MENIT DIMULAI! Silakan Auto-Clicker Jalan <<<");
+                        }
+
+                        total_clicks += 1;
+                        clicks_this_second += 1;
+
                         color_idx = (color_idx + 1) % COLORS.len();
                         dirty = true;
                     }
                 }
                 InputStatus::Handled
             }) {}
+        }
+
+        // Monitoring Per Detik & Limit 60 Detik
+        if test_started {
+            let now = Instant::now();
+
+            // Cetak CPS setiap 1 detik
+            if now.duration_since(last_second) >= Duration::from_secs(1) {
+                let elapsed_total = now.duration_since(start_time).as_secs();
+                info!(
+                    "[DETIK {}s] CPS: {} | Total Klik: {}",
+                    elapsed_total, clicks_this_second, total_clicks
+                );
+
+                clicks_this_second = 0;
+                last_second = now;
+
+                // Stop & Print Laporan Setelah 1 Menit (60 detik)
+                if elapsed_total >= 60 {
+                    let avg_cps = total_clicks as f64 / 60.0;
+                    info!("===============================================");
+                    info!(" HASIL PENGUJIAN AUTO CLICKER (1 MENIT)");
+                    info!(" Total Klik  : {} klik", total_clicks);
+                    info!(" Rata-rata   : {:.2} CPS (Clicks Per Second)", avg_cps);
+                    info!("===============================================");
+
+                    test_started = false; // Reset status pengujian
+                }
+            }
         }
 
         if dirty {
