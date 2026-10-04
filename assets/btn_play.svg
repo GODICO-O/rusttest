@@ -1,10 +1,7 @@
-<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <!-- Outer Shadow -->
-  <circle cx="100" cy="100" r="95" fill="#11111b" opacity="0.3"/>
-  <!-- Main Button Body (GD Green) -->
-  <circle cx="100" cy="100" r="85" fill="#24e064" stroke="#ffffff" stroke-width="8"/>
-  <!-- Inner Rim -->
-  <circle cx="100" cy="100" r="75" fill="none" stroke="#1ba848" stroke-width="6"/>
-  <!-- Play Triangle Icon -->
-  <polygon points="80,60 140,100 80,140" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <rect x="6" y="6" width="188" height="188" rx="26" fill="#000000"/>
+  <rect x="18" y="18" width="164" height="164" rx="16" fill="#35e035"/>
+  <rect x="18" y="18" width="164" height="62" rx="16" fill="#6df56d"/>
+  <polygon points="68,50 68,150 154,100" fill="#000000"/>
+  <polygon points="82,74 82,126 132,100" fill="#ffffff"/>
 </svg>

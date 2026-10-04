@@ -1,91 +1,102 @@
 use bevy::prelude::*;
 use bevy_svg::prelude::*;
 
+// Setengah ukuran SVG (200x200) untuk hit-test
+const HALF_SIZE: f32 = 100.0;
+
 #[derive(Component)]
 struct GdButton {
-    base_scale: Vec3,
-    target_scale: Vec3,
-    is_pressed: bool,
+    base_scale: f32,
+    target: f32,
+    scale: f32,
+    velocity: f32,
+    pressed: bool,
 }
 
 #[bevy_main]
 pub fn main() {
-    #[cfg(target_os = "android")]
-    android_logger::init_once(
-        android_logger::Config::default().with_max_level(log::LevelFilter::Info),
-    );
-
     App::new()
+        .insert_resource(ClearColor(Color::srgb(0.08, 0.08, 0.22)))
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "GD Vector Button Test (Bevy 0.19)".into(),
-                resolution: (800, 600).into(),
+                title: "GD Vector Button".into(),
                 ..default()
             }),
             ..default()
         }))
         .add_plugins(SvgPlugin)
         .add_systems(Startup, setup)
-        .add_systems(Update, (button_interaction_system, button_animate_system))
+        .add_systems(Update, (button_touch_system, button_spring_system))
         .run();
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn((Camera2d, Msaa::Sample4));
+    commands.spawn(Camera2d);
 
     let svg_handle: Handle<Svg> = asset_server.load("btn_play.svg");
-    let base_scale = Vec3::splat(1.2);
+    let base = 1.2;
 
     commands.spawn((
         Svg2d(svg_handle),
         Origin::Center,
-        Transform::from_xyz(0.0, 0.0, 0.0).with_scale(base_scale),
+        Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::splat(base)),
         GdButton {
-            base_scale,
-            target_scale: base_scale,
-            is_pressed: false,
+            base_scale: base,
+            target: base,
+            scale: base,
+            velocity: 0.0,
+            pressed: false,
         },
     ));
 }
 
-fn button_interaction_system(
-    buttons: Res<ButtonInput<MouseButton>>,
+fn button_touch_system(
+    touches: Res<Touches>,
     windows: Query<&Window>,
     camera_q: Query<(&Camera, &GlobalTransform)>,
     mut btn_q: Query<(&Transform, &mut GdButton)>,
 ) {
-    let Ok(window) = windows.single() else { return };
-    let Ok((camera, camera_transform)) = camera_q.single() else { return };
+    let Ok(_window) = windows.single() else { return };
+    let Ok((camera, cam_tf)) = camera_q.single() else { return };
 
-    if let Some(world_position) = window
-        .cursor_position()
-        .and_then(|cursor| camera.viewport_to_world_2d(camera_transform, cursor).ok())
-    {
-        for (transform, mut btn) in btn_q.iter_mut() {
-            let distance = transform.translation.truncate().distance(world_position);
-            let is_hovered = distance <= 100.0 * transform.scale.x;
-
-            if is_hovered && buttons.just_pressed(MouseButton::Left) {
-                btn.is_pressed = true;
-                btn.target_scale = btn.base_scale * 0.85;
-                info!(">> [GD Vector] Tombol Ditekan!");
+    for touch in touches.iter_just_pressed() {
+        let Ok(world) = camera.viewport_to_world_2d(cam_tf, touch.position()) else {
+            continue;
+        };
+        for (tf, mut btn) in btn_q.iter_mut() {
+            let d = (world - tf.translation.truncate()).abs();
+            let half = HALF_SIZE * btn.base_scale;
+            if d.x <= half && d.y <= half {
+                btn.pressed = true;
+                btn.target = btn.base_scale * 0.85;
+                info!("[GD] tombol ditekan");
             }
+        }
+    }
 
-            if buttons.just_released(MouseButton::Left) && btn.is_pressed {
-                btn.is_pressed = false;
-                btn.target_scale = btn.base_scale * 1.25;
-                info!(">> [GD Vector] Action Executed!");
+    let released = touches.iter_just_released().count() + touches.iter_just_canceled().count();
+    if released > 0 {
+        for (_, mut btn) in btn_q.iter_mut() {
+            if btn.pressed {
+                btn.pressed = false;
+                btn.target = btn.base_scale;
+                // dorongan ke atas -> overshoot lalu memantul ala GD
+                btn.velocity = 9.0;
+                info!("[GD] aksi dijalankan");
             }
         }
     }
 }
 
-fn button_animate_system(time: Res<Time>, mut btn_q: Query<(&mut Transform, &mut GdButton)>) {
-    let delta = time.delta_secs();
-    for (mut transform, mut btn) in btn_q.iter_mut() {
-        if !btn.is_pressed && (btn.target_scale - btn.base_scale).length() > 0.01 {
-            btn.target_scale = btn.target_scale.lerp(btn.base_scale, delta * 10.0);
-        }
-        transform.scale = transform.scale.lerp(btn.target_scale, delta * 25.0);
+fn button_spring_system(time: Res<Time>, mut btn_q: Query<(&mut Transform, &mut GdButton)>) {
+    let dt = time.delta_secs().min(1.0 / 30.0);
+    let stiffness = 420.0;
+    let damping = 15.0; // rasio redaman ~0.37 -> memantul
+
+    for (mut tf, mut btn) in btn_q.iter_mut() {
+        let accel = stiffness * (btn.target - btn.scale) - damping * btn.velocity;
+        btn.velocity += accel * dt;
+        btn.scale += btn.velocity * dt;
+        tf.scale = Vec3::splat(btn.scale);
     }
 }
